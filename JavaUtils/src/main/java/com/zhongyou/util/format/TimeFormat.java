@@ -53,14 +53,14 @@ public class TimeFormat {
 		long duration = durationMilliSeconds / 1000;
 		Stack<String> stack = new Stack<>();
 		for (BiRef<Integer, String> part : formatParam) {
-			if (part.value1 == null) {
-				stack.push(String.format(part.value2, duration));
+			if (part.getFirst() == null) {
+				stack.push(String.format(part.getSecond(), duration));
 				break;
 			} else {
-				long partValue = duration % part.value1;
+				long partValue = duration % part.getFirst();
 				duration -= partValue;
-				duration /= part.value1;
-				stack.push(String.format(part.value2, partValue));
+				duration /= part.getFirst();
+				stack.push(String.format(part.getSecond(), partValue));
 				if (duration <= 0) {
 					break;
 				}

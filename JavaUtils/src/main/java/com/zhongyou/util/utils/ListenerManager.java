@@ -2,11 +2,11 @@ package com.zhongyou.util.utils;
 
 import com.zhongyou.util.function.Consumer;
 
+import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 public class ListenerManager<T> {
-	private Set<T> mListeners = new CopyOnWriteArraySet<>();
+	private final Set<T> mListeners = new HashSet<>();
 	private final Object mLock = new Object();
 
 	public void registerListener(T t) {
@@ -28,10 +28,17 @@ public class ListenerManager<T> {
 	}
 
 	public void forEachListener(Consumer<T> action) {
+		Set<T> cache;
 		synchronized (mLock) {
-			for (T t : mListeners) {
-				action.accept(t);
+			cache = new HashSet<>(mListeners);
+		}
+		for (T t : cache) {
+			synchronized (mLock) {
+				if (!mListeners.contains(t)) {
+					continue;
+				}
 			}
+			action.accept(t);
 		}
 	}
 

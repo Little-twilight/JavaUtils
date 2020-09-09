@@ -1,11 +1,15 @@
 package com.zhongyou.util.blocker;
 
 
+import com.google.common.base.Joiner;
+import com.zhongyou.util.ZyLogger;
 import com.zhongyou.util.function.Consumer;
 import com.zhongyou.util.ref.BiRef;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -13,6 +17,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 
 public class BlockerManager {
+	private static final String TAG = BlockerManager.class.getSimpleName();
 	private final Map<Blocker, BiRef<Thread, BlockerPolicy>> mBlockers = new HashMap<>();
 	private final Map<Thread, Set<Blocker>> mBlockerGeneratorThreads = new HashMap<>();
 	private final Set<Thread> mBlockedThreads = new HashSet<>();
@@ -25,12 +30,21 @@ public class BlockerManager {
 	private volatile boolean mIsApprovalInUse = false;
 	private Consumer<Boolean> mOnBlockStatusChangedListener;
 	private Consumer<Boolean> mOnApprovalStatusChangedListener;
+	private String mTag;
 
 	public BlockerManager(Lock lock) {
 		Objects.requireNonNull(lock);
 		mLock = lock;
 		mBlockerCondition = lock.newCondition();
 		mApprovalCondition = lock.newCondition();
+	}
+
+	public String getTag() {
+		return mTag;
+	}
+
+	public void setTag(String tag) {
+		mTag = tag;
 	}
 
 	public Approval registerApproval(String tag) {
@@ -48,6 +62,12 @@ public class BlockerManager {
 						Thread thread = Thread.currentThread();
 						try {
 							mBlockedThreads.add(thread);
+							List<String> approvalTags = new ArrayList<>();
+							for (Approval approval : mApprovals.keySet()) {
+								approvalTags.add(approval.getTag());
+							}
+							String tags= Joiner.on(",").useForNull("null").join(approvalTags);
+							ZyLogger.d(TAG, String.format("Approval register %s blocked, previous approvals {%s}", tag, tags));
 							mBlockerCondition.await();
 						} catch (InterruptedException e) {
 							Thread.interrupted();
@@ -210,7 +230,7 @@ public class BlockerManager {
 				if (threadAndBlockParam == null) {
 					return;
 				}
-				Thread thread = threadAndBlockParam.value1;
+				Thread thread = threadAndBlockParam.getFirst();
 				Set<Blocker> blockers = mBlockerGeneratorThreads.get(thread);
 				if (blockers != null) {
 					blockers.remove(thisBlocker);
@@ -237,7 +257,7 @@ public class BlockerManager {
 						return false;
 					}
 					BiRef<Thread, BlockerPolicy> threadAndPolicy = mBlockers.get(this);
-					Thread previousThread = threadAndPolicy.value1;
+					Thread previousThread = threadAndPolicy.getFirst();
 					Thread currentThread = Thread.currentThread();
 					if (currentThread.equals(previousThread)) {
 						return true;
@@ -256,7 +276,7 @@ public class BlockerManager {
 					}
 					currentThreadBlockers.add(this);
 
-					threadAndPolicy.value1 = currentThread;
+					threadAndPolicy.setFirst(currentThread);
 
 					return true;
 				} finally {
@@ -298,7 +318,7 @@ public class BlockerManager {
 						for (Blocker blocker : blockers) {
 							BiRef<Thread, BlockerPolicy> threadAndBlockParam = mBlockers.get(blocker);
 							if (threadAndBlockParam != null) {
-								switch (threadAndBlockParam.value2) {
+								switch (threadAndBlockParam.getSecond()) {
 									case ThrowException:
 										return BlockerApprovalTestType.ThrowException;
 									case TotallyBlocked:
