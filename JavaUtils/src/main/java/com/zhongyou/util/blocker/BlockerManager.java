@@ -62,12 +62,21 @@ public class BlockerManager {
 						Thread thread = Thread.currentThread();
 						try {
 							mBlockedThreads.add(thread);
-							List<String> approvalTags = new ArrayList<>();
+							List<String> approvalInfo = new ArrayList<>();
 							for (Approval approval : mApprovals.keySet()) {
-								approvalTags.add(approval.getTag());
+								approvalInfo.add(String.format("Thread: %s, tag: %s", mApprovals.get(approval).getName(), approval.getTag()));
 							}
-							String tags= Joiner.on(",").useForNull("null").join(approvalTags);
-							ZyLogger.d(TAG, String.format("Approval register %s blocked, previous approvals {%s}", tag, tags));
+							List<String> blockerInfo = new ArrayList<>();
+							for (Map.Entry<Blocker, BiRef<Thread, BlockerPolicy>> entry : mBlockers.entrySet()) {
+								blockerInfo.add(String.format("Thread: %s, tag: %s, policy: %s", entry.getValue().getFirst().getName(), entry.getKey().getTag(), entry.getValue().getSecond()));
+							}
+							ZyLogger.i(TAG, String.format(
+									"Approval register blocked\nThread: %s\ntag: %s\n\nPrevious approvals:\n%s\n\nBlockers:\n%s",
+									thread.getName(),
+									tag,
+									approvalInfo.isEmpty() ? "null" : Joiner.on("\n").useForNull("null").join(approvalInfo),
+									blockerInfo.isEmpty() ? "null" : Joiner.on("\n").useForNull("null").join(blockerInfo)
+							));
 							mBlockerCondition.await();
 						} catch (InterruptedException e) {
 							Thread.interrupted();

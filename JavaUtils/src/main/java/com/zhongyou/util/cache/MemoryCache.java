@@ -67,7 +67,7 @@ public class MemoryCache<Key, Entry> {
 		return mEntryKeyCache.isEntryCached(entry);
 	}
 
-	public synchronized Entry queryCache(Key key) {
+	public synchronized Entry queryCacheByKey(Key key) {
 		return updateLruCache(mEntryKeyCache.queryEntryCache(key));
 	}
 
@@ -75,7 +75,7 @@ public class MemoryCache<Key, Entry> {
 		return mEntryKeyCache.queryEntryKeyCache(updateLruCache(entry));
 	}
 
-	public synchronized Entry queryCache(long index) {
+	public synchronized Entry queryCacheByIndex(long index) {
 		return updateLruCache(mEntryIndexCache.queryEntryCache(index));
 	}
 
@@ -90,7 +90,27 @@ public class MemoryCache<Key, Entry> {
 		if (isEntryCached(entry)) {
 			return true;
 		}
+		Outer:
 		if (!mEntryKeyCache.cache(key, entry)) {
+			Key keyCache = mEntryKeyCache.queryEntryKeyCache(entry);
+			if (keyCache != null) {
+				if (!keyCache.equals(key)) {
+					if (drop(entry)) {
+						if (mEntryKeyCache.cache(key, entry)) {
+							break Outer;
+						}
+					}
+				}
+			} else {
+				Entry cacheByKey = mEntryKeyCache.queryEntryCache(key);
+				if (cacheByKey != null && !cacheByKey.equals(entry)) {
+					if (drop(cacheByKey)) {
+						if (mEntryKeyCache.cache(key, entry)) {
+							break Outer;
+						}
+					}
+				}
+			}
 			return false;
 		}
 		if (!mEntryIndexCache.cache(index, entry)) {
@@ -113,6 +133,18 @@ public class MemoryCache<Key, Entry> {
 		mLruCacheQueue.remove(entry);
 		return true;
 	}
+
+//	public synchronized boolean drop(long index) {
+//		Entry cache = mEntryIndexCache.queryEntryCache(index);
+//		if (cache == null) {
+//			return true;
+//		}
+//
+//		mEntryKeyCache.dropEntry(cache);
+//		mEntryIndexCache.dropEntry(cache);
+//		mLruCacheQueue.remove(cache);
+//		return true;
+//	}
 
 	public synchronized void notifyIndexInsert(long index) {
 		for (Map.Entry<Long, Entry> entry : mEntryIndexCache.tailEntries(index, true).descendingMap().entrySet()) {

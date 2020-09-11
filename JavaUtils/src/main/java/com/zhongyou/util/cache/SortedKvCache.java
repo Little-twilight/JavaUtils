@@ -10,6 +10,11 @@ import java.util.TreeMap;
 public class SortedKvCache<K extends Comparable, V> {
 	private final TreeMap<K, V> mCacheEntries = new TreeMap<>();
 	private final Map<V, K> mCacheEntriesInverse = new HashMap<>();
+	private volatile int mSize = 0;
+
+	public int size(){
+		return mSize;
+	}
 
 	public synchronized boolean cache(K key, V entry) {
 		Objects.requireNonNull(key);
@@ -19,6 +24,7 @@ public class SortedKvCache<K extends Comparable, V> {
 		} else {
 			mCacheEntries.put(key, entry);
 			mCacheEntriesInverse.put(entry, key);
+			mSize = mCacheEntries.size();
 			return true;
 		}
 
@@ -29,6 +35,7 @@ public class SortedKvCache<K extends Comparable, V> {
 			return;
 		}
 		mCacheEntriesInverse.remove(mCacheEntries.remove(key));
+		mSize = mCacheEntries.size();
 	}
 
 	public synchronized void dropEntry(V entry) {
@@ -36,6 +43,7 @@ public class SortedKvCache<K extends Comparable, V> {
 			return;
 		}
 		mCacheEntries.remove(mCacheEntriesInverse.remove(entry));
+		mSize = mCacheEntries.size();
 	}
 
 	public synchronized boolean isEntryCached(V entry) {

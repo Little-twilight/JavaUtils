@@ -7,14 +7,18 @@ import com.zhongyou.util.collection.ArrayMap;
 import java.util.Map;
 import java.util.Objects;
 
-;
-
 public class KvCache<K, V> {
 	private final BiMap<K, V> mCacheEntries = HashBiMap.create();
+	private volatile int mSize = 0;
+
+	public int size(){
+		return mSize;
+	}
 
 	public synchronized Map<K, V> entries() {
 		Map<K, V> ret = new ArrayMap<>();
 		ret.putAll(mCacheEntries);
+		mSize = mCacheEntries.size();
 		return ret;
 	}
 
@@ -25,6 +29,7 @@ public class KvCache<K, V> {
 			return mCacheEntries.get(key) == entry;
 		} else {
 			mCacheEntries.put(key, entry);
+			mSize = mCacheEntries.size();
 			return true;
 		}
 
@@ -35,6 +40,7 @@ public class KvCache<K, V> {
 			return;
 		}
 		mCacheEntries.remove(key);
+		mSize = mCacheEntries.size();
 	}
 
 	public synchronized void dropEntry(V entry) {
@@ -42,6 +48,7 @@ public class KvCache<K, V> {
 			return;
 		}
 		mCacheEntries.remove(queryEntryKeyCache(entry));
+		mSize = mCacheEntries.size();
 	}
 
 	public synchronized boolean isEntryCached(V entry) {
