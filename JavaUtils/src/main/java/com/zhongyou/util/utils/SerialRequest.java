@@ -356,4 +356,15 @@ public class SerialRequest<T> extends CompositeRequest<T> {
 			}
 		}
 	}
+
+	public static ValueCompositor<Boolean> booleanValueCompositor() {
+		return subActions -> {
+			for (Request subAction : subActions) {
+				if (!Boolean.TRUE.equals(subAction.getResultValue())) {
+					return false;
+				}
+			}
+			return true;
+		};
+	}
 }
