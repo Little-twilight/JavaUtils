@@ -5,7 +5,7 @@ dependencies {
     api 'apache-codec:commons-codec:1.2'
     api 'com.google.guava:guava:28.0-android'
     api 'com.google.code.gson:gson:2.8.5'
-    api 'com.github.Little-twilight:Logger:V0.5'
+    api 'com.github.Little-twilight:Logger:V0.6'
     implementation 'junit:junit:4.12'
 }
 
